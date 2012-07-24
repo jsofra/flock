@@ -1,63 +1,53 @@
 (ns flock.dynamic
   (:use quil.core)
-  (:import processing.core.PVector))
-
-(defn draw-boid [{:keys [pos vect]}]
-  (with-translation [(.-x pos) (.-y pos)]
-    (with-rotation [(+ (.heading2D vect) (Math/toRadians 90))]
-      (triangle 0 -10 -5 10 5 10))))
-
-(defn normalize [vect]
-  (let [v (.get vect)]
-    (.normalize v)
-    v))
-
-(defn rand-PVector []
-  (normalize (PVector. (- 1.0 (rand 2.0)) (- 1.0 (rand 2.0)))))
-
-(defn dist-filter [thres boid boids]
-  (filter #(< (PVector/dist (:pos boid) (:pos %)) thres) boids))
-
-(defn vect-avg [vects]
- (-> (reduce #(PVector/add %1 %2) (PVector.) vects)
-     (PVector/div (float (count vects)))))
+  (:require [flock.vector :as vt]
+            [clojure.math.combinatorics :as comb]))
 
 (defn alignment [boid boids]
-  (vect-avg (map :vect boids)))
+  (vt/avg (map :vect boids)))
 
 (defn separation [boid boids]
   (let [loc (:pos boid)
-        locs (map :pos boids)
-        dists (map #(PVector/dist loc %) locs)
-        diffs (map #(-> loc
-                        (PVector/sub %1)
-                        normalize
-                        (PVector/div %2)) locs dists)]
-    (vect-avg diffs)))
+        other-locs (map :pos boids)
+        diffs (map #(let [dist (vt/dist loc %)]
+                      (-> (vt/sub loc %)
+                         vt/normalise
+                         (vt/div dist))) other-locs)]
+    (vt/avg diffs)))
 
 (defn cohesion [boid boids]
-  (let [target (vect-avg (map :pos boids))]
-    (-> (PVector/sub target (:pos boid))
-        (PVector/div 100.0))))
+  (let [target (vt/avg (map :pos boids))]
+    (-> (vt/sub target (:pos boid))
+        (vt/div 100.0))))
 
 (defn avoid [target boid]
-  (-> (PVector/sub (:pos boid) target)
-      (PVector/div 100.0)))
+  (-> (vt/sub (:pos boid) target)
+      (vt/div 100.0)))
 
-(defn limit-force [force limit]
-  (if (> (.mag force) limit)
-    (PVector/mult (normalize force) (float limit))
-    force))
+(def neighbour-dist 80.0)
+(def momentum 0.5)
+(def max-mag 4.0)
+(def boid-rules [{:rule alignment :weight 0.2}
+                 {:rule separation :weight 20.0}
+                 {:rule cohesion :weight 0.6}
+                 ])
 
 (defn apply-force [{:keys [pos vect] :as boid} force]
-  (assoc boid :vect (limit-force (PVector/add vect force) 4.0)))
+  (let [new-vect (vt/add
+                  vect
+                  (vt/mult vect momentum)
+                  (vt/mult force (- 1.0 momentum)))]
+    (assoc boid :vect (vt/limit-mag new-vect max-mag))))
 
-(defn run-rules [boid boids rules weights]
-  (let [forces (map (fn [rule] (if (zero? (count boids))
-                                (PVector.)
-                                (rule boid boids))) rules)
-        weighted-forces (map #(PVector/mult %1 (float %2)) forces weights)
-        force (reduce #(PVector/add %1 %2) (PVector.) weighted-forces)]
+(defn calc-force [boid boids {:keys [rule weight]}]
+  (-> (if (zero? (count boids))
+         [0.0 0.0]
+         (rule boid boids))
+      (vt/mult weight)))
+
+(defn run-rules [boid boids rules]
+  (let [weighted-forces (map #(calc-force boid boids %) rules)
+        force (reduce vt/add [0.0 0.0] weighted-forces)]
     (apply-force boid force)))
 
 (defn add-boid [boids* boid]
@@ -65,40 +55,48 @@
 
 (defn wrap-borders [pos]
   (let [w (width) h (height)
-        x (.-x pos) y (.-y pos)
+        [x y] pos
         x (if (> x w) (- x w) x)
         x (if (< x 0) (+ x w) x)
         y (if (> y h) (- y h) y)
         y (if (< y 0) (+ y h) y)]
-    (PVector. x y)))
+    [x y]))
 
 (defn trans-boid [{:keys [pos vect] :as boid}]
-  (assoc boid :pos (wrap-borders (PVector/add pos vect))))
+  (assoc boid :pos (wrap-borders (vt/add pos vect))))
+
+(defn calc-dist-map [boids]
+  (let [pairs (map (partial into #{}) (comb/combinations boids 2))]
+    (into {} (for [p pairs] [p (apply vt/dist (map :pos p))]))))
+
+(defn calc-neighbours [boid boids thres dist-map]
+  (filter #(< (dist-map #{boid %}) thres) (disj boids boid)))
 
 (defn update-fn [boids]
-  (into #{}
-        (map #(let [neighbours (into #{} (dist-filter 500.0 % boids))]
-                (-> %
-                    (run-rules (disj neighbours %)
-                               [alignment separation cohesion]
-                               [1.0 2.0 1.0])
-                    trans-boid)) boids)))
+  (let [dist-map (calc-dist-map boids)
+        boid-update (fn [boid]
+                      (let [neighbours (calc-neighbours boid boids neighbour-dist dist-map)]
+                        (trans-boid (run-rules boid neighbours boid-rules))))]
+    (into #{} (map boid-update boids))))
 
 (defn update-boids [boids*]
   (swap! boids* update-fn))
 
 (defn mouse-released []
   (add-boid (state :boids)
-            {:pos (PVector. (mouse-x) (mouse-y))
-             :vect (rand-PVector)}))
+            {:pos  [(mouse-x) (mouse-y)] :vect (vt/rand-vect)}))
 
 (defn mouse-moved []
   (let [boids* (state :boids)]
     (swap! boids*
            (fn [boids]
              (into #{}
-                   (map #(apply-force % (avoid (PVector. (mouse-x) (mouse-y)) %))
-                        boids))))))
+                   (map #(apply-force % (vt/mult (avoid [(mouse-x) (mouse-y)] %) 100.0)) boids))))))
+
+(defn draw-boid [{:keys [pos vect]}]
+  (with-translation pos
+    (with-rotation [(+ (vt/heading vect) (Math/toRadians 90))]
+      (triangle 0 -10 -5 10 5 10))))
 
 (defn setup []
   (set-state! :boids (atom #{}))

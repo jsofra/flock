@@ -8,4 +8,4 @@
   :draw dyn/draw
   :mouse-released dyn/mouse-released
   :mouse-moved dyn/mouse-moved
-  :size [400 400])
+  :size [800 800])
