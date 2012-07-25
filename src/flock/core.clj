@@ -9,3 +9,6 @@
   :mouse-released dyn/mouse-released
   :mouse-moved dyn/mouse-moved
   :size [800 800])
+
+(defn -main [& args]
+  (println "Start Flocking!"))
