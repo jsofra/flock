@@ -10,7 +10,7 @@
 
 (defn normalise [vect]
   (let [m (mag vect)]
-    (if (or (zero? m) (== m 1)) m (div vect m))))
+    (if (or (zero? m) (== m 1)) vect (div vect m))))
 
 (defn limit-mag [vect limit]
   (if (> (mag vect) limit)
@@ -27,3 +27,7 @@
 
 (defn rand-vect []
   (normalise [(- 1.0 (rand 2.0)) (- 1.0 (rand 2.0))]))
+
+(defn scale-by-mag [vect]
+  (let [m (mag vect)]
+    (if (zero? m) vect (div (normalise vect) m))))
