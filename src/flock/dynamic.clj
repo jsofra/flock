@@ -6,10 +6,9 @@
 (defn alignment [boid {:keys [neighbours]}]
   (vt/avg (map :vect neighbours)))
 
-(defn separation [boid {:keys [neighbours]}]
-  (let [loc (:pos boid)
-        other-locs (map :pos neighbours)
-        diffs (map #(vt/scale-by-mag (vt/sub loc %)) other-locs)]
+(defn separation [{boid-pos :pos} {:keys [neighbours]}]
+  (let [diffs (for [n-pos (map :pos neighbours)]
+                (vt/div-by-mag (vt/sub boid-pos n-pos)))]
     (vt/avg diffs)))
 
 (defn cohesion [boid {:keys [neighbours]}]
@@ -19,7 +18,7 @@
 
 (defn avoidance [{boid-pos :pos} {{target-pos :pos target-dist :dist} :target}]
   (if (< (vt/dist boid-pos target-pos) target-dist)
-    (vt/scale-by-mag (vt/sub boid-pos target-pos))
+    (vt/div-by-mag (vt/sub boid-pos target-pos))
     [0 0]))
 
 (def momentum 0.5)

@@ -4,6 +4,10 @@
 (defn sub [& vects] (apply mapv - vects))
 (defn mult [vect scalar] (mapv #(* % scalar) vect))
 (defn div [vect scalar] (mapv #(/ % scalar) vect))
+(defn safe-div [vect scalar & {:keys [default] :or {default vect}}]
+  (if (zero? scalar)
+    default
+    (mapv #(/ % scalar) vect)))
 
 (defn mag [vect]
   (Math/sqrt (reduce + (map * vect vect) )))
@@ -28,6 +32,5 @@
 (defn rand-vect []
   (normalise [(- 1.0 (rand 2.0)) (- 1.0 (rand 2.0))]))
 
-(defn scale-by-mag [vect]
-  (let [m (mag vect)]
-    (if (zero? m) vect (div (normalise vect) m))))
+(defn div-by-mag [vect]
+  (safe-div (normalise vect) (mag vect)))
