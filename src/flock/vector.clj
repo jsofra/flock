@@ -7,7 +7,7 @@
 (defn safe-div [vect scalar & {:keys [default] :or {default vect}}]
   (if (zero? scalar)
     default
-    (mapv #(/ % scalar) vect)))
+    (div vect scalar)))
 
 (defn mag [vect]
   (Math/sqrt (reduce + (map * vect vect) )))
