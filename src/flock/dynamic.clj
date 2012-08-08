@@ -3,20 +3,20 @@
   (:require [flock.vector :as vt]
             [clojure.math.combinatorics :as comb]))
 
-(defn alignment [boid {:keys [neighbours]}]
+(defn alignment [{:keys [neighbours]}]
   (vt/avg (map :vect neighbours)))
 
-(defn separation [{boid-pos :pos} {:keys [neighbours]}]
+(defn separation [{{boid-pos :pos} :boid neighbours :neighbours}]
   (let [diffs (for [n-pos (map :pos neighbours)]
                 (vt/div-by-mag (vt/sub boid-pos n-pos)))]
     (vt/avg diffs)))
 
-(defn cohesion [boid {:keys [neighbours]}]
+(defn cohesion [{:keys [neighbours boid]}]
   (let [target (vt/avg (map :pos neighbours))]
     (-> (vt/sub target (:pos boid))
         (vt/div 100.0))))
 
-(defn avoidance [{boid-pos :pos} {{target-pos :pos target-dist :dist} :target}]
+(defn avoidance [{{boid-pos :pos} :boid {target-pos :pos target-dist :dist} :target}]
   (if (< (vt/dist boid-pos target-pos) target-dist)
     (vt/div-by-mag (vt/sub boid-pos target-pos))
     [0 0]))
@@ -33,8 +33,8 @@
                 (let [neighbours (neighbours-fn dist)]
                   (if (zero? (count neighbours))
                     [0.0 0.0]
-                    (rule-fn boid (merge {:neighbours neighbours} args))))
-                (rule-fn boid args))]
+                    (rule-fn (merge {:boid boid :neighbours neighbours} args))))
+                (rule-fn (merge {:boid boid} args)))]
     (vt/mult force weight)))
 
 (defn apply-force [{:keys [pos vect] :as boid} force]
