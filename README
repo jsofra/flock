@@ -1,13 +1,16 @@
 # flock
 
-FIXME: write description
+This is an implementation of a flocking model first designed by Craig Reynolds in 1986.
+You can see Craig's discussion of it here: http://www.red3d.com/cwr/boids/
 
-## Usage
+This also draws on some ideas from 'The Computational Beauty of Nature' - Gary William Flake
 
-FIXME: write
+It is a very straight foward implementation that is not efficient but allows for rules
+to be added, removed and modified while the application is running.
 
-## License
-
-Copyright (C) 2012 FIXME
-
-Distributed under the Eclipse Public License, the same as Clojure.
+TODO:
+ * Add some form of data structure for efficently calculating neighbours,
+   possibly a quad-tree or kd-tree.
+ * Write or find faster vector operations (could use PVector from proccessing libs).
+ * Refine the boid neigbourhood by restricting the angular range.
+ * Add 'sight' rule from Flake to produce V shape.
