@@ -14,3 +14,6 @@ TODO:
  * Write or find faster vector operations (could use PVector from proccessing libs).
  * Refine the boid neigbourhood by restricting the angular range.
  * Add 'sight' rule from Flake to produce V shape.
+
+You can check it out by downloading https://github.com/jsofra/flock/raw/master/target/flock-1.0.0-SNAPSHOT-standalone.jar
+and running: java -jar flock-1.0.0-SNAPSHOT-standalone.jar
