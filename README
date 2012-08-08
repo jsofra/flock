@@ -17,3 +17,5 @@ TODO:
 
 You can check it out by downloading https://github.com/jsofra/flock/raw/master/target/flock-1.0.0-SNAPSHOT-standalone.jar
 and running: java -jar flock-1.0.0-SNAPSHOT-standalone.jar
+
+Click the window to add new boids, they will flock and avoid the mouse cursor.
